@@ -1,6 +1,8 @@
 const financialRecordRepository = require("../repositories/financial-record.repository");
+const auditLogService = require("./audit-log.service");
+const cacheService = require("./cache.service");
 const ApiError = require("../utils/api-error");
-const { RECORD_TYPES, ROLES } = require("../utils/constants");
+const { ROLES } = require("../utils/constants");
 const {
   isNonEmptyString,
   isPositiveNumber,
@@ -15,8 +17,17 @@ class FinancialRecordService {
     const validatedPayload = this.validateCreateOrUpdatePayload(payload);
     const record = await financialRecordRepository.create({
       userId: user.sub,
+      createdBy: user.sub,
+      updatedBy: user.sub,
       ...validatedPayload
     });
+
+    await auditLogService.logRecordEvent({
+      userId: user.sub,
+      action: "CREATE",
+      entityId: record.id
+    });
+    await this.invalidateDashboardSummaryCache();
 
     return this.sanitizeRecord(record);
   }
@@ -55,7 +66,17 @@ class FinancialRecordService {
 
     const record = await this.getOwnedOrAdminRecord(user, recordId);
     const validatedPayload = this.validateCreateOrUpdatePayload(payload);
-    const updatedRecord = await financialRecordRepository.update(record, validatedPayload);
+    const updatedRecord = await financialRecordRepository.update(record, {
+      ...validatedPayload,
+      updatedBy: user.sub
+    });
+
+    await auditLogService.logRecordEvent({
+      userId: user.sub,
+      action: "UPDATE",
+      entityId: updatedRecord.id
+    });
+    await this.invalidateDashboardSummaryCache();
 
     return this.sanitizeRecord(updatedRecord);
   }
@@ -64,11 +85,36 @@ class FinancialRecordService {
     this.ensureWriteAccess(user);
 
     const record = await this.getOwnedOrAdminRecord(user, recordId);
+    record.updatedBy = user.sub;
     await financialRecordRepository.softDelete(record);
+
+    await auditLogService.logRecordEvent({
+      userId: user.sub,
+      action: "DELETE",
+      entityId: record.id
+    });
+    await this.invalidateDashboardSummaryCache();
   }
 
-  async getOwnedOrAdminRecord(user, recordId) {
-    const record = await financialRecordRepository.findById(recordId);
+  async restoreRecord(user, recordId) {
+    this.ensureWriteAccess(user);
+
+    const record = await this.getOwnedOrAdminRecord(user, recordId, true);
+    record.updatedBy = user.sub;
+    const restoredRecord = await financialRecordRepository.restore(record);
+
+    await auditLogService.logRecordEvent({
+      userId: user.sub,
+      action: "UPDATE",
+      entityId: restoredRecord.id
+    });
+    await this.invalidateDashboardSummaryCache();
+
+    return this.sanitizeRecord(restoredRecord);
+  }
+
+  async getOwnedOrAdminRecord(user, recordId, includeDeleted = false) {
+    const record = await financialRecordRepository.findById(recordId, includeDeleted);
 
     if (!record) {
       throw new ApiError(404, "Record not found");
@@ -134,6 +180,14 @@ class FinancialRecordService {
       filters.category = query.category;
     }
 
+    if (query.search && !isNonEmptyString(query.search)) {
+      throw new ApiError(400, "Invalid search value");
+    }
+
+    if (query.search) {
+      filters.search = query.search.trim();
+    }
+
     if (query.startDate) {
       if (!isValidDateValue(query.startDate)) {
         throw new ApiError(400, "Invalid startDate");
@@ -190,6 +244,8 @@ class FinancialRecordService {
     return {
       id: record.id,
       userId: record.userId,
+      createdBy: record.createdBy,
+      updatedBy: record.updatedBy,
       amount: Number(record.amount),
       type: record.type,
       category: record.category,
@@ -198,6 +254,10 @@ class FinancialRecordService {
       isDeleted: record.isDeleted,
       createdAt: record.createdAt
     };
+  }
+
+  async invalidateDashboardSummaryCache() {
+    await cacheService.deleteByPrefix("dashboard_summary_user_");
   }
 }
 

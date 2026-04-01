@@ -116,5 +116,11 @@ router.delete(
   validate(financialRecordIdSchema),
   financialRecordController.deleteRecord
 );
+router.patch(
+  "/:id/restore",
+  authorizeRoles(ROLES.ADMIN, ROLES.ANALYST),
+  validate(financialRecordIdSchema),
+  financialRecordController.restoreRecord
+);
 
 module.exports = router;

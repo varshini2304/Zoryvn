@@ -18,6 +18,7 @@ const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().positive("limit must be a positive integer").max(100, "limit must be 100 or less").optional(),
   type: z.nativeEnum(RECORD_TYPES).optional(),
   category: z.string().trim().min(1).max(100).optional(),
+  search: z.string().trim().min(1, "search must not be empty").max(100, "search is too long").optional(),
   startDate: z.coerce.date({ errorMap: () => ({ message: "Invalid startDate" }) }).optional(),
   endDate: z.coerce.date({ errorMap: () => ({ message: "Invalid endDate" }) }).optional(),
   sortBy: z.enum(["date", "amount"]).optional(),

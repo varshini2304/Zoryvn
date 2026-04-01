@@ -6,11 +6,11 @@ class FinancialRecordRepository {
     return FinancialRecord.create(payload);
   }
 
-  findById(id) {
+  findById(id, includeDeleted = false) {
     return FinancialRecord.findOne({
       where: {
         id,
-        isDeleted: false
+        ...(includeDeleted ? {} : { isDeleted: false })
       }
     });
   }
@@ -39,6 +39,12 @@ class FinancialRecordRepository {
     return record;
   }
 
+  async restore(record) {
+    record.isDeleted = false;
+    await record.save();
+    return record;
+  }
+
   buildFilters(filters) {
     const where = {};
 
@@ -52,6 +58,21 @@ class FinancialRecordRepository {
 
     if (filters.category) {
       where.category = filters.category;
+    }
+
+    if (filters.search) {
+      where[Op.or] = [
+        {
+          category: {
+            [Op.iLike]: `%${filters.search}%`
+          }
+        },
+        {
+          notes: {
+            [Op.iLike]: `%${filters.search}%`
+          }
+        }
+      ];
     }
 
     if (filters.startDate || filters.endDate) {

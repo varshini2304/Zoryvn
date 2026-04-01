@@ -1,6 +1,16 @@
 const dotenv = require("dotenv");
+const path = require("path");
 
-dotenv.config();
+const nodeEnv = process.env.NODE_ENV || "development";
+
+[path.resolve(process.cwd(), ".env"), path.resolve(process.cwd(), `.env.${nodeEnv}`)].forEach(
+  (filePath, index) => {
+    dotenv.config({
+      path: filePath,
+      override: index > 0
+    });
+  }
+);
 
 const requiredEnvVars = ["PORT", "DB_URL", "JWT_SECRET"];
 
@@ -15,5 +25,6 @@ module.exports = {
   dbUrl: process.env.DB_URL,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
-  nodeEnv: process.env.NODE_ENV || "development"
+  redisUrl: process.env.REDIS_URL || "",
+  nodeEnv
 };

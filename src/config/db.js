@@ -14,7 +14,9 @@ const sequelize = new Sequelize(env.dbUrl, {
 
 const connectDB = async () => {
   await sequelize.authenticate();
-  await sequelize.sync();
+  await sequelize.sync({
+    alter: env.nodeEnv === "development"
+  });
   console.log("Database connected successfully");
 };
 

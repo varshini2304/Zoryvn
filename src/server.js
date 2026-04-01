@@ -1,11 +1,13 @@
 const app = require("./app");
 const env = require("./config/env");
 const connectDB = require("./config/db");
+const { connectRedis } = require("./config/redis");
 require("./models");
 
 const startServer = async () => {
   try {
     await connectDB();
+    await connectRedis();
 
     app.listen(env.port, () => {
       console.log(`Server running on port ${env.port}`);

@@ -54,9 +54,24 @@ const deleteRecord = async (req, res, next) => {
   }
 };
 
+const restoreRecord = async (req, res, next) => {
+  try {
+    const record = await financialRecordService.restoreRecord(req.user, req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Record restored successfully",
+      data: record
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createRecord,
   getRecords,
   updateRecord,
-  deleteRecord
+  deleteRecord,
+  restoreRecord
 };

@@ -15,6 +15,16 @@ const FinancialRecord = sequelize.define(
       allowNull: false,
       field: "user_id"
     },
+    createdBy: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: "created_by"
+    },
+    updatedBy: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: "updated_by"
+    },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
@@ -58,7 +68,9 @@ const FinancialRecord = sequelize.define(
       { fields: ["user_id"] },
       { fields: ["date"] },
       { fields: ["type"] },
-      { fields: ["category"] }
+      { fields: ["category"] },
+      { fields: ["notes"] },
+      { fields: ["is_deleted"] }
     ]
   }
 );

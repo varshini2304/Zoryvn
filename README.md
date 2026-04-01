@@ -11,6 +11,7 @@ It is designed for a backend developer assessment with a focus on clean architec
 - Financial record CRUD with filtering, pagination, sorting, and soft delete
 - Dashboard APIs for summary, category breakdown, trends, and recent activity
 - Centralized validation, error handling, rate limiting, and basic logging
+- Audit logs for financial record changes
 
 ## Tech Stack
 - Backend: Node.js, Express
@@ -52,12 +53,14 @@ The system is designed with scalability in mind, ensuring:
 - Filtering by `type`, `category`, and date range
 - Sorting by `date` or `amount`
 - Owner-based modification rules for non-admin users
+- Audit logs track all financial record changes to ensure traceability and accountability.
 
 ### Dashboard APIs
 - Summary totals for income, expense, and net balance
 - Category-wise totals separated by income and expense
 - Daily or monthly trends
 - Recent transaction activity
+- Dashboard APIs use Redis caching with short TTL to improve performance and reduce database load.
 
 ### Security and Validation
 - Password hashing with `bcryptjs`
@@ -68,7 +71,7 @@ The system is designed with scalability in mind, ensuring:
 - Sensitive data such as passwords are hashed and never exposed in API responses.
 
 ## API Endpoints
-Base URL: `/api`
+Base URL: `/api/v1`
 
 ### Health
 - `GET /health`
@@ -144,7 +147,7 @@ The system needs structured relational data, filtering, indexing, and efficient 
 All dashboard calculations are performed at the database level using aggregation queries to improve performance and avoid unnecessary memory usage in the application layer.
 
 ### Index Strategy
-Indexes are applied on `userId`, `date`, and `type` fields to optimize filtering and aggregation queries.
+Indexes are applied on `userId`, `date`, `type`, `category`, and `notes` fields to optimize filtering, search, and aggregation queries.
 
 ### Why JWT
 JWT keeps authentication stateless, simple to scale, and easy to integrate with role-based authorization checks in middleware.
@@ -173,7 +176,7 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
 
 ## Sample Requests and Responses
 ### Register
-`POST /api/auth/register`
+`POST /api/v1/auth/register`
 
 ```json
 {
@@ -202,7 +205,7 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
 ```
 
 ### Create Financial Record
-`POST /api/records`
+`POST /api/v1/records`
 
 ```json
 {
@@ -215,7 +218,7 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
 ```
 
 ### Dashboard Summary
-`GET /api/dashboard/summary`
+`GET /api/v1/dashboard/summary`
 
 ```json
 {

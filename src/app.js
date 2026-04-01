@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const swaggerUi = require("swagger-ui-express");
 
 const routes = require("./routes");
+const healthRoutes = require("./routes/health.routes");
 const errorHandler = require("./middleware/error.middleware");
 const { apiRateLimiter } = require("./middleware/rate-limit.middleware");
 const swaggerSpec = require("./config/swagger");
@@ -18,13 +19,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiRateLimiter);
 
-app.get("/health", (_req, res) => {
-  res.status(200).json({
-    status: "ok"
-  });
-});
-
+app.use("/api/v1/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api/v1/health", healthRoutes);
+app.use("/api/v1", routes);
 app.use("/api", routes);
 app.use(errorHandler);
 

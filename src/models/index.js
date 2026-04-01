@@ -1,5 +1,6 @@
 const User = require("./user.model");
 const FinancialRecord = require("./financial-record.model");
+const AuditLog = require("./audit-log.model");
 
 User.hasMany(FinancialRecord, {
   foreignKey: "userId",
@@ -11,7 +12,18 @@ FinancialRecord.belongsTo(User, {
   as: "user"
 });
 
+User.hasMany(AuditLog, {
+  foreignKey: "userId",
+  as: "auditLogs"
+});
+
+AuditLog.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user"
+});
+
 module.exports = {
   User,
-  FinancialRecord
+  FinancialRecord,
+  AuditLog
 };

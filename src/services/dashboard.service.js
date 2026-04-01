@@ -1,4 +1,5 @@
 const dashboardRepository = require("../repositories/dashboard.repository");
+const cacheService = require("./cache.service");
 const ApiError = require("../utils/api-error");
 const { ROLES, RECORD_TYPES } = require("../utils/constants");
 const { isValidDateValue } = require("../utils/validators");
@@ -6,15 +7,25 @@ const { isValidDateValue } = require("../utils/validators");
 class DashboardService {
   async getSummary(user, query) {
     const scope = this.buildScope(user, query);
+    const cacheKey = this.buildSummaryCacheKey(user, scope);
+    const cachedSummary = await cacheService.get(cacheKey);
+
+    if (cachedSummary) {
+      return cachedSummary;
+    }
+
     const [summary] = await dashboardRepository.getSummary(scope);
     const totalIncome = Number(summary?.totalIncome || 0);
     const totalExpense = Number(summary?.totalExpense || 0);
-
-    return {
+    const result = {
       totalIncome,
       totalExpense,
       netBalance: totalIncome - totalExpense
     };
+
+    await cacheService.set(cacheKey, result, 60);
+
+    return result;
   }
 
   async getCategoryBreakdown(user, query) {
@@ -152,6 +163,17 @@ class DashboardService {
     }
 
     return parsedLimit;
+  }
+
+  buildSummaryCacheKey(user, scope) {
+    const userKey = user.role === ROLES.ADMIN ? "all" : user.sub;
+
+    return [
+      `dashboard_summary_user_${userKey}`,
+      `role_${user.role}`,
+      `start_${scope.startDate ? scope.startDate.toISOString() : "none"}`,
+      `end_${scope.endDate ? scope.endDate.toISOString() : "none"}`
+    ].join("_");
   }
 }
 
