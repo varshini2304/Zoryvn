@@ -17,12 +17,12 @@ const FinancialRecord = sequelize.define(
     },
     createdBy: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       field: "created_by"
     },
     updatedBy: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       field: "updated_by"
     },
     amount: {
