@@ -18,8 +18,7 @@ app.use(apiRateLimiter);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({
-    success: true,
-    message: "Server is running"
+    status: "ok"
   });
 });
 

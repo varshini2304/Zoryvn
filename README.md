@@ -31,6 +31,12 @@ The codebase follows a layered architecture:
 
 This structure keeps the code modular, testable, and easier to extend without coupling route handlers directly to database operations.
 
+## System Design Thought
+The system is designed with scalability in mind, ensuring:
+- Clear separation of concerns
+- Role-based access enforcement at middleware level
+- Database-level aggregation to reduce server load
+
 ## Features
 ### Authentication and Roles
 - User registration and login with JWT
@@ -59,9 +65,13 @@ This structure keeps the code modular, testable, and easier to extend without co
 - Centralized error handling
 - Rate limiting for auth and API routes
 - Sensitive fields excluded from API responses
+- Sensitive data such as passwords are hashed and never exposed in API responses.
 
 ## API Endpoints
 Base URL: `/api`
+
+### Health
+- `GET /health`
 
 ### Auth
 - `POST /auth/register`
@@ -129,6 +139,12 @@ It separates transport logic, business logic, and persistence logic. This keeps 
 
 ### Why PostgreSQL
 The system needs structured relational data, filtering, indexing, and efficient aggregation queries for dashboard analytics. PostgreSQL is a strong fit for these requirements.
+
+### Why DB-Level Aggregation
+All dashboard calculations are performed at the database level using aggregation queries to improve performance and avoid unnecessary memory usage in the application layer.
+
+### Index Strategy
+Indexes are applied on `userId`, `date`, and `type` fields to optimize filtering and aggregation queries.
 
 ### Why JWT
 JWT keeps authentication stateless, simple to scale, and easy to integrate with role-based authorization checks in middleware.
