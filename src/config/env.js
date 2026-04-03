@@ -2,15 +2,25 @@ const dotenv = require("dotenv");
 const path = require("path");
 
 const nodeEnv = process.env.NODE_ENV || "development";
+const initialEnvKeys = new Set(Object.keys(process.env));
+const envFiles = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), `.env.${nodeEnv}`)
+];
 
-[path.resolve(process.cwd(), ".env"), path.resolve(process.cwd(), `.env.${nodeEnv}`)].forEach(
-  (filePath, index) => {
-    dotenv.config({
-      path: filePath,
-      override: index > 0
-    });
+envFiles.forEach((filePath) => {
+  const result = dotenv.config({ path: filePath });
+
+  if (result.error || !result.parsed) {
+    return;
   }
-);
+
+  Object.entries(result.parsed).forEach(([key, value]) => {
+    if (!initialEnvKeys.has(key) && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  });
+});
 
 const requiredEnvVars = ["PORT", "DB_URL", "JWT_SECRET"];
 
