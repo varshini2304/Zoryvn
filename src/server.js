@@ -7,18 +7,21 @@ require("./models");
 const startServer = async () => {
   try {
     await connectDB();
-    await connectRedis();
-
-    app.listen(env.port, () => {
-      console.log(`Server running on port ${env.port}`);
-    });
   } catch (error) {
     console.error(
-      "Failed to start server:",
+      "Failed to connect to database:",
       error.message || error.original?.code || error.name || error
     );
     process.exit(1);
   }
+
+  await connectRedis();
+
+  const port = env.port || 10000;
+
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
 };
 
 startServer();
