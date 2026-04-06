@@ -30,6 +30,13 @@ class DashboardService {
 
   async getCategoryBreakdown(user, query) {
     const scope = this.buildScope(user, query);
+    const cacheKey = this.buildSummaryCacheKey(user, scope).replace("dashboard_summary_", "dashboard_categories_");
+    const cachedCategories = await cacheService.get(cacheKey);
+
+    if (cachedCategories) {
+      return cachedCategories;
+    }
+
     const rows = await dashboardRepository.getCategoryBreakdown(scope);
     const categories = new Map();
 
@@ -55,12 +62,23 @@ class DashboardService {
       categories.set(category, existing);
     });
 
-    return Array.from(categories.values());
+    const result = Array.from(categories.values());
+    await cacheService.set(cacheKey, result, 60);
+
+    return result;
   }
 
   async getTrends(user, query) {
     const scope = this.buildScope(user, query);
     const period = this.validateTrendPeriod(query.period);
+    
+    const cacheKey = this.buildSummaryCacheKey(user, scope).replace("dashboard_summary_", `dashboard_trends_${period}_`);
+    const cachedTrends = await cacheService.get(cacheKey);
+
+    if (cachedTrends) {
+      return cachedTrends;
+    }
+
     const rows = await dashboardRepository.getTrends(scope, period);
     const trends = new Map();
 
@@ -86,7 +104,10 @@ class DashboardService {
       trends.set(key, existing);
     });
 
-    return Array.from(trends.values());
+    const result = Array.from(trends.values());
+    await cacheService.set(cacheKey, result, 60);
+
+    return result;
   }
 
   async getRecentActivity(user, query) {
@@ -112,6 +133,8 @@ class DashboardService {
 
     if (user.role !== ROLES.ADMIN) {
       scope.userId = user.sub;
+    } else if (query.userId) {
+      scope.userId = query.userId;
     }
 
     if (query.startDate) {
@@ -144,11 +167,15 @@ class DashboardService {
       return "day";
     }
 
+    if (normalizedPeriod === "weekly") {
+      return "week";
+    }
+
     if (normalizedPeriod === "monthly") {
       return "month";
     }
 
-    throw new ApiError(400, "period must be daily or monthly");
+    throw new ApiError(400, "period must be daily, weekly, or monthly");
   }
 
   parseRecentLimit(limit) {

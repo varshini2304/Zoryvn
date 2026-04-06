@@ -20,7 +20,17 @@ const loginSchema = z.object({
   query: emptyObjectSchema
 });
 
+const changePasswordSchema = z.object({
+  body: z.object({
+    oldPassword: z.string().trim().min(1, "Current password is required"),
+    newPassword: z.string().trim().min(8, "New password must be at least 8 characters")
+  }).strict(),
+  params: emptyObjectSchema,
+  query: emptyObjectSchema
+});
+
 module.exports = {
   registerSchema,
-  loginSchema
+  loginSchema,
+  changePasswordSchema
 };

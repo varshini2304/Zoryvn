@@ -27,6 +27,10 @@ const AuditLog = sequelize.define(
       allowNull: false,
       field: "entity_id"
     },
+    metadata: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
     timestamp: {
       type: DataTypes.DATE,
       allowNull: false,

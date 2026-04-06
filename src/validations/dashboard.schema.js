@@ -2,7 +2,8 @@ const { z, emptyObjectSchema } = require("./common.schema");
 
 const dateRangeQueryShape = {
   startDate: z.coerce.date({ errorMap: () => ({ message: "Invalid startDate" }) }).optional(),
-  endDate: z.coerce.date({ errorMap: () => ({ message: "Invalid endDate" }) }).optional()
+  endDate: z.coerce.date({ errorMap: () => ({ message: "Invalid endDate" }) }).optional(),
+  userId: z.string().uuid().optional()
 };
 
 const withDateRangeValidation = (schema) =>
@@ -32,7 +33,7 @@ const trendsSchema = z.object({
   query: withDateRangeValidation(
     z.object({
       ...dateRangeQueryShape,
-      period: z.enum(["daily", "monthly"]).optional()
+      period: z.enum(["daily", "weekly", "monthly"]).optional()
     })
   )
 });

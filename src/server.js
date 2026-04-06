@@ -2,6 +2,7 @@ const app = require("./app");
 const env = require("./config/env");
 const connectDB = require("./config/db");
 const { connectRedis } = require("./config/redis");
+const { initRecurringJob } = require("./jobs/recurring.job");
 require("./models");
 
 const startServer = async () => {
@@ -16,6 +17,9 @@ const startServer = async () => {
   }
 
   await connectRedis();
+
+  // Start cron jobs
+  initRecurringJob();
 
   const port = env.port || 10000;
 

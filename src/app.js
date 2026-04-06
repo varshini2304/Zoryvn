@@ -7,6 +7,7 @@ const swaggerUi = require("swagger-ui-express");
 const routes = require("./routes");
 const healthRoutes = require("./routes/health.routes");
 const errorHandler = require("./middleware/error.middleware");
+const requestIdMiddleware = require("./middleware/request-id.middleware");
 const { apiRateLimiter } = require("./middleware/rate-limit.middleware");
 const swaggerSpec = require("./config/swagger");
 
@@ -14,6 +15,7 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+app.use(requestIdMiddleware);
 app.use(helmet());
 app.use(cors());
 app.use(morgan("combined"));

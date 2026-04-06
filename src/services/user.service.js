@@ -1,8 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const env = require("../config/env");
 const userRepository = require("../repositories/user.repository");
+const cacheService = require("./cache.service");
 const ApiError = require("../utils/api-error");
 const { ROLES } = require("../utils/constants");
 const {
@@ -58,6 +60,48 @@ class UserService {
     return this.buildAuthResponse(user);
   }
 
+  async logout(token) {
+    try {
+      const decoded = jwt.verify(token, env.jwtSecret);
+      const jti = decoded.jti;
+
+      if (!jti) {
+        return; // Old token without jti — nothing to blacklist
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const remainingTtl = decoded.exp - now;
+
+      if (remainingTtl > 0) {
+        await cacheService.setWithTtl(`blacklist:${jti}`, remainingTtl);
+      }
+    } catch {
+      // If token is already expired or invalid, nothing to do
+    }
+  }
+
+  async changePassword(userId, oldPassword, newPassword) {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Current password is incorrect");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new ApiError(400, "New password must differ from current password");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    await user.save();
+  }
+
   async getUsers() {
     return userRepository.findAll();
   }
@@ -91,11 +135,13 @@ class UserService {
   }
 
   buildAuthResponse(user) {
+    const jti = crypto.randomUUID();
     const token = jwt.sign(
       {
         sub: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        jti
       },
       env.jwtSecret,
       { expiresIn: env.jwtExpiresIn }

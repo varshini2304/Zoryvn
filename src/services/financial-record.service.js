@@ -2,30 +2,25 @@ const financialRecordRepository = require("../repositories/financial-record.repo
 const auditLogService = require("./audit-log.service");
 const cacheService = require("./cache.service");
 const ApiError = require("../utils/api-error");
+const fastCsv = require("fast-csv");
 const { ROLES } = require("../utils/constants");
-const {
-  isNonEmptyString,
-  isPositiveNumber,
-  isValidDateValue,
-  isValidRecordType
-} = require("../utils/validators");
 
 class FinancialRecordService {
   async createRecord(user, payload) {
     this.ensureWriteAccess(user);
 
-    const validatedPayload = this.validateCreateOrUpdatePayload(payload);
     const record = await financialRecordRepository.create({
       userId: user.sub,
       createdBy: user.sub,
       updatedBy: user.sub,
-      ...validatedPayload
+      ...payload
     });
 
     await auditLogService.logRecordEvent({
       userId: user.sub,
       action: "CREATE",
-      entityId: record.id
+      entityId: record.id,
+      metadata: { after: this.sanitizeRecord(record) }
     });
     await this.invalidateDashboardSummaryCache();
 
@@ -33,15 +28,19 @@ class FinancialRecordService {
   }
 
   async getRecords(user, query) {
-    const page = this.parsePositiveInteger(query.page, 1);
-    const limit = Math.min(this.parsePositiveInteger(query.limit, 10), 100);
+    const page = query.page || 1;
+    const limit = query.limit || 10;
     const offset = (page - 1) * limit;
-    const filters = this.validateFilters(query);
+    
+    // We can rely on query being valid because of the Zod schema
     const where = financialRecordRepository.buildFilters({
-      ...filters,
+      ...query,
       userId: user.role === ROLES.ADMIN ? undefined : user.sub
     });
-    const order = this.buildSort(query.sortBy, query.sortOrder);
+    
+    const sortBy = query.sortBy || "date";
+    const sortOrder = query.sortOrder ? query.sortOrder.toUpperCase() : "DESC";
+    const order = [[sortBy, sortOrder]];
 
     const { count, rows } = await financialRecordRepository.findAndCountAll({
       where,
@@ -61,20 +60,108 @@ class FinancialRecordService {
     };
   }
 
+  async exportRecords(user, query, responseStream) {
+    const where = financialRecordRepository.buildFilters({
+      ...query,
+      userId: user.role === ROLES.ADMIN ? undefined : user.sub
+    });
+
+    const csvStream = fastCsv.format({ headers: true });
+    csvStream.pipe(responseStream);
+
+    let offset = 0;
+    const limit = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { rows } = await financialRecordRepository.findAndCountAll({
+        where,
+        limit,
+        offset,
+        order: [["date", "DESC"]]
+      });
+
+      if (rows.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const record of rows) {
+        csvStream.write(this.sanitizeRecord(record));
+      }
+
+      offset += limit;
+    }
+
+    csvStream.end();
+  }
+
+  async importRecords(user, fileBuffer) {
+    this.ensureWriteAccess(user);
+
+    return new Promise((resolve, reject) => {
+      const recordsToInsert = [];
+      const errors = [];
+      let rowNumber = 1;
+
+      fastCsv
+        .parseString(fileBuffer.toString(), { headers: true, skipEmptyLines: true })
+        .on("data", (row) => {
+          rowNumber++;
+          try {
+            recordsToInsert.push({
+              userId: user.sub,
+              createdBy: user.sub,
+              updatedBy: user.sub,
+              amount: Number(row.amount),
+              type: row.type,
+              category: row.category,
+              date: new Date(row.date),
+              notes: row.notes || null,
+            });
+          } catch (err) {
+            errors.push(`Row ${rowNumber}: Invalid data format`);
+          }
+        })
+        .on("end", async () => {
+          if (recordsToInsert.length > 0) {
+            try {
+              await financialRecordRepository.createBulk(recordsToInsert);
+              await auditLogService.logRecordEvent({
+                userId: user.sub,
+                action: "CREATE",
+                entityId: "BULK_IMPORT",
+                metadata: { importedCount: recordsToInsert.length }
+              });
+              await this.invalidateDashboardSummaryCache();
+            } catch (err) {
+              reject(new ApiError(500, "Database error during bulk insert"));
+              return;
+            }
+          }
+          resolve({ inserted: recordsToInsert.length, errors });
+        })
+        .on("error", () => {
+          reject(new ApiError(400, "Failed to parse CSV file"));
+        });
+    });
+  }
+
   async updateRecord(user, recordId, payload) {
     this.ensureWriteAccess(user);
 
     const record = await this.getOwnedOrAdminRecord(user, recordId);
-    const validatedPayload = this.validateCreateOrUpdatePayload(payload);
+    const oldRecordData = this.sanitizeRecord(record);
     const updatedRecord = await financialRecordRepository.update(record, {
-      ...validatedPayload,
+      ...payload,
       updatedBy: user.sub
     });
 
     await auditLogService.logRecordEvent({
       userId: user.sub,
       action: "UPDATE",
-      entityId: updatedRecord.id
+      entityId: updatedRecord.id,
+      metadata: { before: oldRecordData, after: this.sanitizeRecord(updatedRecord) }
     });
     await this.invalidateDashboardSummaryCache();
 
@@ -86,12 +173,14 @@ class FinancialRecordService {
 
     const record = await this.getOwnedOrAdminRecord(user, recordId);
     record.updatedBy = user.sub;
+    const oldRecordData = this.sanitizeRecord(record);
     await financialRecordRepository.softDelete(record);
 
     await auditLogService.logRecordEvent({
       userId: user.sub,
       action: "DELETE",
-      entityId: record.id
+      entityId: record.id,
+      metadata: { before: oldRecordData }
     });
     await this.invalidateDashboardSummaryCache();
   }
@@ -106,7 +195,8 @@ class FinancialRecordService {
     await auditLogService.logRecordEvent({
       userId: user.sub,
       action: "UPDATE",
-      entityId: restoredRecord.id
+      entityId: restoredRecord.id,
+      metadata: { action: "RESTORED", after: this.sanitizeRecord(restoredRecord) }
     });
     await this.invalidateDashboardSummaryCache();
 
@@ -133,112 +223,7 @@ class FinancialRecordService {
     }
   }
 
-  validateCreateOrUpdatePayload(payload) {
-    const { amount, type, category, date, notes } = payload;
 
-    if (!isPositiveNumber(amount)) {
-      throw new ApiError(400, "Amount must be a positive number");
-    }
-
-    if (!isValidRecordType(type)) {
-      throw new ApiError(400, "Type must be INCOME or EXPENSE");
-    }
-
-    if (!isNonEmptyString(category)) {
-      throw new ApiError(400, "Category is required");
-    }
-
-    if (!isValidDateValue(date)) {
-      throw new ApiError(400, "Invalid date");
-    }
-
-    if (notes !== undefined && notes !== null && typeof notes !== "string") {
-      throw new ApiError(400, "Notes must be a string");
-    }
-
-    return {
-      amount,
-      type,
-      category: category.trim(),
-      date: new Date(date),
-      notes: isNonEmptyString(notes) ? notes.trim() : null
-    };
-  }
-
-  validateFilters(query) {
-    const filters = {};
-
-    if (query.type) {
-      if (!isValidRecordType(query.type)) {
-        throw new ApiError(400, "Invalid type filter");
-      }
-
-      filters.type = query.type;
-    }
-
-    if (query.category) {
-      filters.category = query.category;
-    }
-
-    if (query.search && !isNonEmptyString(query.search)) {
-      throw new ApiError(400, "Invalid search value");
-    }
-
-    if (query.search) {
-      filters.search = query.search.trim();
-    }
-
-    if (query.startDate) {
-      if (!isValidDateValue(query.startDate)) {
-        throw new ApiError(400, "Invalid startDate");
-      }
-
-      filters.startDate = new Date(query.startDate);
-    }
-
-    if (query.endDate) {
-      if (!isValidDateValue(query.endDate)) {
-        throw new ApiError(400, "Invalid endDate");
-      }
-
-      filters.endDate = new Date(query.endDate);
-    }
-
-    if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
-      throw new ApiError(400, "startDate cannot be greater than endDate");
-    }
-
-    return filters;
-  }
-
-  buildSort(sortBy = "date", sortOrder = "DESC") {
-    const allowedSortFields = ["date", "amount"];
-    const normalizedSortOrder = String(sortOrder).toUpperCase();
-
-    if (!allowedSortFields.includes(sortBy)) {
-      throw new ApiError(400, "Invalid sortBy value");
-    }
-
-    if (!["ASC", "DESC"].includes(normalizedSortOrder)) {
-      throw new ApiError(400, "Invalid sortOrder value");
-    }
-
-    return [[sortBy, normalizedSortOrder]];
-  }
-
-  parsePositiveInteger(value, defaultValue) {
-    if (value === undefined) {
-      return defaultValue;
-    }
-
-    const parsedValue = Number(value);
-
-    if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
-      throw new ApiError(400, "Pagination values must be positive integers");
-    }
-
-    return parsedValue;
-  }
 
   sanitizeRecord(record) {
     return {
@@ -258,6 +243,8 @@ class FinancialRecordService {
 
   async invalidateDashboardSummaryCache() {
     await cacheService.deleteByPrefix("dashboard_summary_user_");
+    await cacheService.deleteByPrefix("dashboard_categories_user_");
+    await cacheService.deleteByPrefix("dashboard_trends_");
   }
 }
 

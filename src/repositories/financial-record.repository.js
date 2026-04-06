@@ -6,6 +6,10 @@ class FinancialRecordRepository {
     return FinancialRecord.create(payload);
   }
 
+  createBulk(payloads) {
+    return FinancialRecord.bulkCreate(payloads);
+  }
+
   findById(id, includeDeleted = false) {
     return FinancialRecord.findOne({
       where: {

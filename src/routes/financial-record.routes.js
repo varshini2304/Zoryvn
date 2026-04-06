@@ -1,4 +1,5 @@
 const express = require("express");
+const multer = require("multer");
 
 const authenticate = require("../middleware/auth.middleware");
 const authorizeRoles = require("../middleware/role.middleware");
@@ -9,12 +10,28 @@ const {
   createFinancialRecordSchema,
   updateFinancialRecordSchema,
   getFinancialRecordsSchema,
+  exportFinancialRecordsSchema,
   financialRecordIdSchema
 } = require("../validations/financial-record.schema");
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authenticate);
+
+router.post(
+  "/import",
+  authorizeRoles(ROLES.ADMIN, ROLES.ANALYST),
+  upload.single("file"),
+  financialRecordController.importRecords
+);
+
+router.get(
+  "/export",
+  authorizeRoles(ROLES.ADMIN, ROLES.ANALYST, ROLES.VIEWER),
+  validate(exportFinancialRecordsSchema),
+  financialRecordController.exportRecords
+);
 
 /**
  * @swagger

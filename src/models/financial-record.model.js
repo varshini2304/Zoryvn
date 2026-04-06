@@ -54,6 +54,22 @@ const FinancialRecord = sequelize.define(
       defaultValue: false,
       field: "is_deleted"
     },
+    isRecurring: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_recurring"
+    },
+    recurrenceInterval: {
+      type: DataTypes.ENUM("daily", "weekly", "monthly"),
+      allowNull: true,
+      field: "recurrence_interval"
+    },
+    nextRecurrenceDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "next_recurrence_date"
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
