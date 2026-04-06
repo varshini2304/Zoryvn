@@ -16,12 +16,18 @@ import { useAuth } from "./hooks/useAuth";
 
 const AppLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-mist text-ink">
-      <div className="flex min-h-screen">
+    <div className="relative min-h-screen bg-mist text-ink selection:bg-ocean/20 selection:text-ocean">
+      {/* Premium ambient background mesh */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -left-[10%] -top-[10%] h-[40%] w-[40%] rounded-full bg-sea/10 blur-[100px]" />
+        <div className="absolute -right-[5%] top-[20%] h-[30%] w-[30%] rounded-full bg-leaf/10 blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen">
         <Sidebar />
-        <div className="flex w-full flex-col">
+        <div className="flex w-full flex-col lg:pl-0">
           <Topbar />
-          <main className="flex-1 px-6 py-6 lg:px-10">{children}</main>
+          <main className="flex-1 animate-fade-in px-4 py-6 md:px-8 lg:px-12">{children}</main>
         </div>
       </div>
     </div>

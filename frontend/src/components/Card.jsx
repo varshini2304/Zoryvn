@@ -1,6 +1,14 @@
-const Card = ({ children, className = "" }) => {
+import { cn } from "../utils/cn";
+
+const Card = ({ children, className = "", animate = false }) => {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white p-6 card-shadow ${className}`}>
+    <div 
+      className={cn(
+        "card-base p-6",
+        animate && "animate-slide-up hover:-translate-y-1",
+        className
+      )}
+    >
       {children}
     </div>
   );

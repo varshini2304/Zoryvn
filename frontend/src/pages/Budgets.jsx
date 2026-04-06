@@ -3,6 +3,7 @@ import api from "../services/api";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import Button from "../components/Button";
+import { cn } from "../utils/cn";
 
 const Budgets = () => {
   const [budgets, setBudgets] = useState([]);
@@ -96,22 +97,25 @@ const Budgets = () => {
           budgets.map((b) => {
             const percentage = Math.min((b.amountUsed / b.monthlyLimit) * 100, 100);
             return (
-              <Card key={b.id} className="p-6">
+              <Card key={b.id} className="p-6 transition-all hover:scale-[1.02]">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-semibold text-lg">{b.category}</h3>
-                  <button onClick={() => handleDelete(b.id)} className="text-red-500 text-sm hover:underline">
+                  <h3 className="font-display font-semibold text-lg text-ink">{b.category}</h3>
+                  <button onClick={() => handleDelete(b.id)} className="text-rose text-sm font-medium hover:underline focus:outline-none">
                     Delete
                   </button>
                 </div>
-                <div className="text-sm text-slate-600 mb-2">
-                  <span className={b.isOverspent ? "text-red-600 font-medium" : ""}>
+                <div className="text-sm font-medium text-slate-500 mb-2">
+                  <span className={b.isOverspent ? "text-rose" : "text-ink"}>
                     ${Number(b.amountUsed).toFixed(2)}
                   </span>
                   {" "}used of ${Number(b.monthlyLimit).toFixed(2)}
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5">
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                   <div
-                    className={`h-2.5 rounded-full ${b.isOverspent ? "bg-red-500" : "bg-emerald-500"}`}
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      b.isOverspent ? "bg-rose" : "bg-ocean"
+                    )}
                     style={{ width: `${percentage}%` }}
                   ></div>
                 </div>

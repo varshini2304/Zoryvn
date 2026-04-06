@@ -7,14 +7,25 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
+  Cell,
 } from "recharts";
+import { 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Wallet,
+  RefreshCw
+} from "lucide-react";
 import api from "../services/api";
 import Card from "../components/Card";
 import SummaryCard from "../components/SummaryCard";
 import { formatCurrency, formatDate } from "../utils/format";
 import Button from "../components/Button";
 import { useToast } from "../context/ToastContext";
+import { cn } from "../utils/cn";
+
+const COLORS_INCOME = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
+const COLORS_EXPENSE = ["#f97316", "#fb923c", "#fdba74", "#fed7aa"];
 
 const Dashboard = () => {
   const [summary, setSummary] = useState(null);
@@ -51,16 +62,16 @@ const Dashboard = () => {
   const categoryIncomeData = useMemo(
     () => categories.filter((item) => item.income > 0).map((item) => ({
       name: item.category,
-      value: item.income
-    })),
+      value: Number(item.income)
+    })).sort((a,b) => b.value - a.value),
     [categories]
   );
 
   const categoryExpenseData = useMemo(
     () => categories.filter((item) => item.expense > 0).map((item) => ({
       name: item.category,
-      value: item.expense
-    })),
+      value: Number(item.expense)
+    })).sort((a,b) => b.value - a.value),
     [categories]
   );
 
@@ -68,8 +79,8 @@ const Dashboard = () => {
     () =>
       trends.map((item) => ({
         name: formatDate(item.period),
-        income: item.income,
-        expense: item.expense
+        income: Number(item.income),
+        expense: Number(item.expense)
       })),
     [trends]
   );
@@ -78,121 +89,208 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="text-sm text-slate-500">Summary of your finance activity.</p>
+          <h2 className="text-2xl font-display font-semibold tracking-tight text-ink">Overview</h2>
+          <p className="text-sm text-slate-500">Your financial activity at a glance.</p>
         </div>
-        <Button variant="outline" onClick={fetchAll}>
-          {loading ? "Refreshing..." : "Refresh"}
+        <Button variant="outline" onClick={fetchAll} disabled={loading} className="gap-2 shrink-0">
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-200" />
+            <div key={item} className="h-[120px] animate-pulse rounded-2xl bg-white shadow-soft" />
           ))}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
-          <SummaryCard title="Total Income" value={formatCurrency(summary?.totalIncome)} accent="bg-leaf" />
-          <SummaryCard title="Total Expense" value={formatCurrency(summary?.totalExpense)} accent="bg-red-500" />
-          <SummaryCard title="Net Balance" value={formatCurrency(summary?.netBalance)} accent="bg-sea" />
+          <SummaryCard 
+            title="Total Income" 
+            value={formatCurrency(summary?.totalIncome)} 
+            icon={ArrowUpRight} 
+            accentClass="text-leaf bg-leaf/10" 
+            animateDelay=""
+          />
+          <SummaryCard 
+            title="Total Expense" 
+            value={formatCurrency(summary?.totalExpense)} 
+            icon={ArrowDownRight} 
+            accentClass="text-ember bg-ember/10" 
+            animateDelay="animation-delay-100"
+          />
+          <SummaryCard 
+            title="Net Balance" 
+            value={formatCurrency(summary?.netBalance)} 
+            icon={Wallet} 
+            accentClass="text-ocean bg-ocean/10" 
+            animateDelay="animation-delay-200"
+          />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Income by category</h3>
-              <p className="text-xs text-slate-500">Distribution of income sources.</p>
-            </div>
+        <Card animate className="flex flex-col">
+          <div className="mb-6">
+            <h3 className="font-display text-lg font-semibold tracking-tight text-ink">Income Distribution</h3>
+            <p className="text-xs text-slate-500">Where your earnings come from.</p>
           </div>
-          <div className="mt-4 h-64">
+          <div className="flex-1 min-h-[300px]">
             {categoryIncomeData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={categoryIncomeData} dataKey="value" nameKey="name" outerRadius={90} fill="#22c55e" />
-                  <Tooltip />
+                  <Pie 
+                    data={categoryIncomeData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={70} 
+                    outerRadius={100} 
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {categoryIncomeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_INCOME[index % COLORS_INCOME.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip wrapperClassName="custom-tooltip" formatter={(value) => formatCurrency(value)} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-sm text-slate-500">No income data yet.</p>
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+                <p className="text-sm text-slate-500">No income data available.</p>
+              </div>
             )}
           </div>
         </Card>
 
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Expense by category</h3>
-              <p className="text-xs text-slate-500">Where the money is going.</p>
-            </div>
+        <Card animate className="flex flex-col">
+          <div className="mb-6">
+            <h3 className="font-display text-lg font-semibold tracking-tight text-ink">Expense Distribution</h3>
+            <p className="text-xs text-slate-500">How your money is spent.</p>
           </div>
-          <div className="mt-4 h-64">
+          <div className="flex-1 min-h-[300px]">
             {categoryExpenseData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={categoryExpenseData} dataKey="value" nameKey="name" outerRadius={90} fill="#f97316" />
-                  <Tooltip />
+                  <Pie 
+                    data={categoryExpenseData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={70} 
+                    outerRadius={100} 
+                    paddingAngle={3}
+                    stroke="none"
+                  >
+                    {categoryExpenseData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_EXPENSE[index % COLORS_EXPENSE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip wrapperClassName="custom-tooltip" formatter={(value) => formatCurrency(value)} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-sm text-slate-500">No expense data yet.</p>
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+                <p className="text-sm text-slate-500">No expense data available.</p>
+              </div>
             )}
           </div>
         </Card>
       </div>
 
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Monthly trends</h3>
-            <p className="text-xs text-slate-500">Income vs expense over time.</p>
-          </div>
+      <Card animate>
+        <div className="mb-6">
+          <h3 className="font-display text-lg font-semibold tracking-tight text-ink">Cash Flow Trends</h3>
+          <p className="text-xs text-slate-500">Income vs expense over time.</p>
         </div>
-        <div className="mt-4 h-72">
+        <div className="h-[350px]">
           {trendData.length ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="income" stroke="#22c55e" strokeWidth={2} />
-                <Line type="monotone" dataKey="expense" stroke="#f97316" strokeWidth={2} />
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => `$${val}`} />
+                <Tooltip wrapperClassName="custom-tooltip" formatter={(value) => formatCurrency(value)} />
+                <Line 
+                  type="monotone" 
+                  dataKey="income" 
+                  name="Income"
+                  stroke="#10b981" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#10b981" }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="expense" 
+                  name="Expense"
+                  stroke="#f97316" 
+                  strokeWidth={3} 
+                  dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: "#f97316" }}
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-slate-500">No trend data yet.</p>
+             <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
+              <p className="text-sm text-slate-500">No trend data available.</p>
+            </div>
           )}
         </div>
       </Card>
 
-      <Card>
-        <h3 className="text-lg font-semibold">Recent transactions</h3>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-xs uppercase text-slate-400">
+      <Card animate>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="font-display text-lg font-semibold tracking-tight text-ink">Recent Transactions</h3>
+            <p className="text-xs text-slate-500">Your latest financial activity.</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50/80">
               <tr>
-                <th className="py-2">Category</th>
-                <th>Type</th>
-                <th>Date</th>
-                <th className="text-right">Amount</th>
+                <th className="rounded-l-lg px-4 py-3 font-semibold text-slate-600">Category</th>
+                <th className="px-4 py-3 font-semibold text-slate-600">Type</th>
+                <th className="px-4 py-3 font-semibold text-slate-600">Date</th>
+                <th className="rounded-r-lg px-4 py-3 text-right font-semibold text-slate-600">Amount</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {recent.length ? (
                 recent.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100">
-                    <td className="py-2 font-medium text-ink">{item.category}</td>
-                    <td>{item.type}</td>
-                    <td>{formatDate(item.date)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(item.amount)}</td>
+                  <tr key={item.id} className="transition-colors hover:bg-slate-50/50">
+                    <td className="px-4 py-3.5 font-medium text-ink">{item.category}</td>
+                    <td className="px-4 py-3.5">
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
+                        item.type === "INCOME" ? "bg-leaf/10 text-leaf" : "bg-ember/10 text-ember"
+                      )}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-500">{formatDate(item.date)}</td>
+                    <td className={cn("px-4 py-3.5 text-right font-semibold", item.type === "INCOME" ? "text-leaf" : "text-ink")}>
+                      {item.type === "INCOME" ? "+" : "-"}{formatCurrency(item.amount)}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="py-6 text-center text-slate-500">
+                  <td colSpan="4" className="px-4 py-8 text-center text-slate-500">
                     No recent transactions.
                   </td>
                 </tr>

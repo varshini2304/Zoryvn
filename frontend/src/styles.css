@@ -8,15 +8,24 @@
 
 body {
   font-family: "Inter", system-ui, sans-serif;
+  background-color: theme('colors.mist');
+  color: theme('colors.ink');
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
 h2,
 h3,
+h4,
+h5,
+h6,
 .nav-title {
   font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 
+/* Hide scrollbar for clean UI but allow scrolling */
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
@@ -26,11 +35,53 @@ h3,
   scrollbar-width: none;
 }
 
+/* Reusable Glass Effect - GPU Accelerated */
 .glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transform: translateZ(0); /* Force GPU */
 }
 
-.card-shadow {
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+.glass-dark {
+  background: rgba(15, 23, 42, 0.85); /* Deep slate ink */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateZ(0); 
+}
+
+/* Base Card Styles */
+.card-base {
+  background-color: theme('colors.surface');
+  border-radius: 1rem;
+  border: 1px solid theme('colors.slate.200');
+  box-shadow: theme('boxShadow.soft');
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-base:hover {
+  box-shadow: theme('boxShadow.soft-lg');
+  /* No transform translate to prevent jumping, purely visual feedback */
+}
+
+/* Chart Tooltip overrides for Recharts to match theme */
+.recharts-tooltip-cursor {
+  fill: theme('colors.slate.50');
+}
+
+.custom-tooltip {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid theme('colors.slate.200') !important;
+  border-radius: 0.75rem !important;
+  box-shadow: theme('boxShadow.soft-lg') !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.custom-tooltip .recharts-tooltip-item-name,
+.custom-tooltip .recharts-tooltip-item-value {
+  color: theme('colors.ink') !important;
+  font-family: "Space Grotesk", system-ui, sans-serif !important;
+  font-weight: 500 !important;
 }
