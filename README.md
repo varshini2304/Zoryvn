@@ -21,8 +21,10 @@ Node.js, Express, PostgreSQL, Redis, Sequelize, JWT, Docker, React
 
 This project focuses on building a scalable, secure, and production-ready backend system rather than just implementing features.
 
-## Live API
-Base URL: https://zoryvn-finance-dashboard.onrender.com
+## Live Demo
+Frontend UI: https://zoryvn-blush.vercel.app/
+
+Base API URL: https://zoryvn-finance-dashboard.onrender.com
 
 Swagger Docs:
 https://zoryvn-finance-dashboard.onrender.com/api/v1/docs
