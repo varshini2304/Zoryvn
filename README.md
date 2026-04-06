@@ -1,33 +1,31 @@
 # Finance Dashboard System with Role-Based Access Control
 
-This project focuses on building a production-ready backend system with scalability, security, and performance optimization.
+## Project Summary
+
+A production-ready finance dashboard backend with advanced features including authentication, role-based access control, caching, audit logging, background jobs, and scalable data processing.
+
+The system is designed for performance, reliability, and real-world usage.
+
+## Overall Impact
+
+- Improved system performance and scalability through caching and streaming
+- Enhanced security with JWT revocation and RBAC
+- Added reliability via fail-safe mechanisms and background jobs
+- Enabled real-world usability with CSV import/export and budgets
+
+## Tech Stack
+
+Node.js, Express, PostgreSQL, Redis, Sequelize, JWT, Docker, React
+
+## Engineering Focus
+
+This project focuses on building a scalable, secure, and production-ready backend system rather than just implementing features.
 
 ## Live API
 Base URL: https://zoryvn-finance-dashboard.onrender.com
 
 Swagger Docs:
 https://zoryvn-finance-dashboard.onrender.com/api/v1/docs
-
-## Project Overview
-This project is a backend API for a finance dashboard system that supports authentication, role-based access control, financial record management, and dashboard analytics.
-
-It is designed for a backend developer assessment with a focus on clean architecture, production-minded structure, and secure API design.
-
-## Key Features
-- JWT-based authentication with secure password hashing
-- Role-based access control for `ADMIN`, `ANALYST`, and `VIEWER`
-- Financial record CRUD with filtering, pagination, sorting, and soft delete
-- Dashboard APIs for summary, category breakdown, trends, and recent activity
-- Centralized validation, error handling, rate limiting, and basic logging
-- Audit logs for financial record changes
-
-## Tech Stack
-- Backend: Node.js, Express
-- Database: PostgreSQL
-- ORM: Sequelize
-- Authentication: JWT
-- Validation: Zod
-- Security: Helmet, bcryptjs, express-rate-limit
 
 ## Architecture
 The codebase follows a layered architecture:
@@ -57,11 +55,17 @@ The system is designed with scalability in mind, ensuring:
 
 ### Financial Records
 - Create, read, update, and soft delete records
+- Bulk import/export from and to CSV
+- Set transactions as recurring (daily, weekly, monthly) using automated CRON jobs
 - Pagination with `page` and `limit`
 - Filtering by `type`, `category`, and date range
 - Sorting by `date` or `amount`
 - Owner-based modification rules for non-admin users
-- Audit logs track all financial record changes to ensure traceability and accountability.
+- Audit logs capture state data `before` and `after` modifications to ensure full traceability.
+
+### Budgets
+- Establish monthly limits per record category
+- Automatic dashboard calculation comparing live expenditures to budget maximums
 
 ### Dashboard APIs
 - Summary totals for income, expense, and net balance
@@ -279,10 +283,6 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
   - Recent Activity
 
 ## Future Improvements
-- Improve caching strategy with fine-grained invalidation
-- Add monitoring and logging for production observability
+- Add monitoring and logging for production observability (e.g., Datadog, Prometheus)
 - Introduce database migrations with Sequelize CLI
-- Add refresh tokens and token revocation strategy
-- Add unit and integration test coverage
-- Add advanced analytics and scheduled reporting
-- Evolve toward service decomposition if the domain grows further
+- Evolve toward frontend Next.js/SSR separation if the domain grows further
