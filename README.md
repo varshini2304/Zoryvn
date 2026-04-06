@@ -1,5 +1,13 @@
 # Finance Dashboard System with Role-Based Access Control
 
+This project focuses on building a production-ready backend system with scalability, security, and performance optimization.
+
+## Live API
+Base URL: https://zoryvn-finance-dashboard.onrender.com
+
+Swagger Docs:
+https://zoryvn-finance-dashboard.onrender.com/api/v1/docs
+
 ## Project Overview
 This project is a backend API for a finance dashboard system that supports authentication, role-based access control, financial record management, and dashboard analytics.
 
@@ -69,6 +77,24 @@ The system is designed with scalability in mind, ensuring:
 - Rate limiting for auth and API routes
 - Sensitive fields excluded from API responses
 - Sensitive data such as passwords are hashed and never exposed in API responses.
+
+## Health Check
+GET /api/v1/health
+
+Response:
+```json
+{
+  "status": "ok",
+  "timestamp": "..."
+}
+```
+
+## Deployment Architecture
+- Backend hosted on Render
+- PostgreSQL hosted on Neon
+- Redis hosted on Upstash
+
+The system uses environment-based configuration and secure connections (SSL/TLS).
 
 ## API Endpoints
 Base URL: `/api/v1`
@@ -156,6 +182,11 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
 - Sequelize `sync()` is convenient for local setup, but migrations would be preferred for production change management
 - Rate limiting is in-memory, which is fine for a single-node assessment but should move to a shared store in distributed deployments
 - Analytics are DB-driven for correctness and performance, but heavy workloads may later benefit from caching or pre-aggregation
+
+### Reliability Considerations
+- Redis is optional with graceful fallback to database
+- Application continues to function even if cache is unavailable
+- Proper error handling prevents system crashes
 
 ## API Response Format
 ### Success
@@ -248,7 +279,8 @@ JWT keeps authentication stateless, simple to scale, and easy to integrate with 
   - Recent Activity
 
 ## Future Improvements
-- Add Redis for rate-limit storage and response caching
+- Improve caching strategy with fine-grained invalidation
+- Add monitoring and logging for production observability
 - Introduce database migrations with Sequelize CLI
 - Add refresh tokens and token revocation strategy
 - Add unit and integration test coverage
